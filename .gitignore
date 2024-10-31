@@ -1,0 +1,7 @@
+.vscode
+.DS_STORE
+log.txt
+PGMViewer.java
+# At root no Jar
+/*.jar
+/SharvitB2
