@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 
 import data.CharacteristicVector;
@@ -13,7 +14,7 @@ import logger.LoggerUtil;
 import utils.MathUtils;
 
 public class KMeansClassifier implements Classifier {
-    private static final Logger logger = LoggerUtil.getLogger(KMeansClassifier.class);
+    private static final Logger logger = LoggerUtil.getLogger(KMeansClassifier.class, Level.INFO);
     private String distanceMetric;
     private int k;
     private int norm;
@@ -69,6 +70,7 @@ public class KMeansClassifier implements Classifier {
                 logger.debug("Iteration {}: Centroids updated", iteration);
             }
             this.arrayCentroid = newCentroid;
+            iteration++;
         }
     }
 
