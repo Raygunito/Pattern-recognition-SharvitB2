@@ -83,7 +83,7 @@ public class ConfusionMatrix {
     /**
      * Display all metrics available (Accuracy, Precision, Recall and F1-Score)
      */
-    public void showPerformance(){
+    public void showPerformance() {
         System.out.println("Accuracy = " + this.accuracy());
         System.out.println("Precision = " + this.globalPrecision());
         System.out.println("Recall = " + this.globalRecall());
@@ -180,6 +180,9 @@ public class ConfusionMatrix {
         // Inside all the false negative there is also the true positive inside that why
         // we substract it
         int falseNegative = matrix.get(label).values().stream().mapToInt(Integer::intValue).sum() - truePositive;
+        if (truePositive == 0) {
+            return 0;
+        }
         return (double) truePositive / (double) (falseNegative + truePositive);
     }
 
@@ -192,9 +195,10 @@ public class ConfusionMatrix {
     public double globalF1Score() {
         double precision = globalPrecision();
         double recall = globalRecall();
-
         if (precision + recall == 0)
             return 0.0;
-        return (double) (2 * (precision * recall)) / (double) (precision + recall);
+        double upper = 2 * precision * recall;
+        double lower = precision + recall;
+        return (double) (upper / lower);
     }
 }
