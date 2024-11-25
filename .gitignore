@@ -1,8 +1,20 @@
+# Eclipse project files
+.project
+.classpath
+.settings/
+
+# VS Code project files
 .vscode
+
+# Output
+bin/
+target/
+
+# OS
 .DS_STORE
+Thumbs.db
+
 log.txt
 PGMViewer.java
 # At root no Jar
 /*.jar
-/SharvitB2
-/res

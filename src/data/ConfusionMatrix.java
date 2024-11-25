@@ -81,6 +81,16 @@ public class ConfusionMatrix {
     }
 
     /**
+     * Display all metrics available (Accuracy, Precision, Recall and F1-Score)
+     */
+    public void showPerformance(){
+        System.out.println("Accuracy = " + this.accuracy());
+        System.out.println("Precision = " + this.globalPrecision());
+        System.out.println("Recall = " + this.globalRecall());
+        System.out.println("F1 Score = " + this.globalF1Score());
+    }
+
+    /**
      * Calculates the accuracy of the classification based on the confusion matrix.
      * Accuracy is the ratio of correct predictions to total predictions.
      * (FR : aussi appelé Taux de reconnaissance)
