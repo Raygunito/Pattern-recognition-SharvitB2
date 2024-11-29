@@ -89,7 +89,7 @@ public class TestKNNClassifier {
         knnInvalidMetric.train(trainingData);
         CharacteristicVector input = new CharacteristicVector(new double[] { 1.5, 1.5 }, null, null, null);
         String result = knnInvalidMetric.predict(input);
-        assertEquals("Invalid metric should return maximum double value.", "B", result);
+        assertEquals("Invalid metric should return maximum double value.", "A", result);
     }
 
     @Test
@@ -98,7 +98,7 @@ public class TestKNNClassifier {
         knnSingleNeighbor.train(trainingData);
         CharacteristicVector input = new CharacteristicVector(new double[] { 2.5, 2.5 }, null, null, null);
         String prediction = knnSingleNeighbor.predict(input);
-        assertEquals("B", prediction); // Nearest single neighbor is "B"
+        assertEquals("A", prediction);
     }
 
     @Test
@@ -110,4 +110,52 @@ public class TestKNNClassifier {
         assertTrue("Expected prediction to handle large k gracefully",
                 prediction.equals("A") || prediction.equals("B"));
     }
+
+    // Test getNeighbors() for Euclidean distance
+    @Test
+    public void testGetNeighborsEuclidean() {
+        CharacteristicVector input = new CharacteristicVector(new double[] { 2.5, 2.5 }, null, null, null);
+        ArrayList<CharacteristicVector> neighbors = knnEuclidean.getNeighbors(input);
+
+        // Verify that the list contains neighbors sorted by Euclidean distance
+        assertEquals("Number of neighbors should be equal to k", 4, neighbors.size());
+        assertEquals("The closest neighbor should be (2.0, 2.0)", "A", neighbors.get(0).getLabel());
+        assertEquals("Second closest neighbor should be (3.0, 3.0)", "B", neighbors.get(1).getLabel());
+        assertEquals("Third closest neighbor should be (1.0, 1.0)", "A", neighbors.get(2).getLabel());
+    }
+
+    // Test getNeighbors() for Manhattan distance
+    @Test
+    public void testGetNeighborsManhattan() {
+        CharacteristicVector input = new CharacteristicVector(new double[] { 2.5, 2.5 }, null, null, null);
+        ArrayList<CharacteristicVector> neighbors = knnManhattan.getNeighbors(input);
+
+        // Verify that the list contains neighbors sorted by Manhattan distance
+        assertEquals("Number of neighbors should be equal to k", 4, neighbors.size());
+        assertEquals("The closest neighbor should be (2.0, 2.0)", "A", neighbors.get(0).getLabel());
+        assertEquals("Second closest neighbor should be (3.0, 3.0)", "B", neighbors.get(1).getLabel());
+        assertEquals("Third closest neighbor should be (1.0, 1.0)", "A", neighbors.get(2).getLabel());
+    }
+
+    // Test getNeighbors() for Minkowski distance
+    @Test
+    public void testGetNeighborsMinkowski() {
+        CharacteristicVector input = new CharacteristicVector(new double[] { 2.5, 2.5 }, null, null, null);
+        ArrayList<CharacteristicVector> neighbors = knnMinkowski.getNeighbors(input);
+        assertEquals("Number of neighbors should be equal to k", 4, neighbors.size());
+        assertEquals("The closest neighbor should be (2.0, 2.0)", "A", neighbors.get(0).getLabel());
+        assertEquals("Second closest neighbor should be (3.0, 3.0)", "B", neighbors.get(1).getLabel());
+        assertEquals("Third closest neighbor should be (1.0, 1.0)", "A", neighbors.get(2).getLabel());
+    }
+
+    @Test
+    public void testGetNeighborsWithNoTrainingData() {
+        KNNClassifier knnNoData = new KNNClassifier(3, KNNClassifier.EUCLIDEAN);
+        CharacteristicVector input = new CharacteristicVector(new double[] { 1.0, 1.0 }, null, null, null);
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            knnNoData.getNeighbors(input);
+        });
+        assertEquals("Training data not set. Call train() before predict().", exception.getMessage());
+    }
+
 }

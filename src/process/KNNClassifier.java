@@ -33,7 +33,7 @@ import utils.MathUtils;
  * </pre>
  */
 public class KNNClassifier implements Classifier {
-    private static final Logger logger = LoggerUtil.getLogger(KNNClassifier.class, Level.INFO);
+    private static final Logger logger = LoggerUtil.getLogger(KNNClassifier.class, Level.WARN);
 
     private String distanceMetric;
     private ArrayList<CharacteristicVector> trainData;
@@ -56,18 +56,26 @@ public class KNNClassifier implements Classifier {
     }
 
     /**
-     * Constructs a KNNClassifier for the Minkowski distance metric with a specified norm.
-     * This constructor is specifically for Minkowski distance as it requires an additional parameter.
+     * Constructs a KNNClassifier for the Minkowski distance metric with a specified
+     * norm.
+     * This constructor is specifically for Minkowski distance as it requires an
+     * additional parameter.
      *
-     * @param k          the number of neighbors to consider when classifying an input.
+     * @param k          the number of neighbors to consider when classifying an
+     *                   input.
      * @param metricName the distance metric to use, expected to be "MINKOWSKI".
-     * @param norm       the norm value for the Minkowski distance metric, must be greater than 0.
+     * @param norm       the norm value for the Minkowski distance metric, must be
+     *                   greater than 0.
      */
     public KNNClassifier(int k, String metricName, int norm) {
+        if (norm < 1) {
+            logger.error("Norm is lower than 1, forcing norm to be equal to 1");
+            norm = 1;
+        }
         logger.info("Initializing KNNClassifier with k={} and Minkowski norm={}", k, norm);
         distanceMetric = metricName;
         this.k = k;
-        this.norm = Math.max(norm, 1);
+        this.norm = norm;
     }
 
     /**
@@ -125,31 +133,105 @@ public class KNNClassifier implements Classifier {
             throw new IllegalStateException("Training data not set. Call train() before predict().");
         }
 
-        ArrayList<Double> distances = new ArrayList<Double>();
-        ArrayList<CharacteristicVector> vectors = new ArrayList<CharacteristicVector>();
-
-        // Sort each Characteristic Vector by their distance to the InputVector
-        for (CharacteristicVector cVector : trainData) {
-            int i = 0;
-            double distance = calculateDistance(cVector, inputVector);
-            while (i < distances.size() && distances.get(i) < distance) {
-                i++;
-            }
-            distances.add(i, distance);
-            vectors.add(i, cVector);
-        }
-        logger.debug("Collected and sorted distances for {} neighbors", k);
+        ArrayList<CharacteristicVector> vectors = this.getNeighbors(inputVector);
 
         // Grab the k-nearest neighbors
         ArrayList<CharacteristicVector> nearest = new ArrayList<>();
         for (int j = 0; j < k && j < vectors.size(); j++) {
             nearest.add(vectors.get(j));
         }
+        logger.debug("Collected and sorted distances for {} neighbors", k);
 
         // Check which class got the most vote
         String predictedLabel = majorityVote(nearest);
         logger.info("Predicted label: {}", predictedLabel);
         return predictedLabel;
+    }
+
+    /**
+     * Retrieves all the neighbors of the given input vector in ascending order of
+     * distance.
+     * If two distances are equal, the vector that was encountered first in the
+     * training data will appear before the later one.
+     *
+     * @param input the CharacteristicVector for which to find the
+     *              neighbors.
+     *              This vector is compared to all vectors in the training data.
+     * @return an ArrayList of CharacteristicVector objects sorted
+     *         in ascending order
+     *         by their distance to the input vector.
+     * @throws IllegalStateException if the training data has not been initialized
+     *                               prior to calling this method.
+     */
+    public ArrayList<CharacteristicVector> getNeighbors(CharacteristicVector input) {
+        logger.debug("Retrieving neighbors of : {}", input);
+
+        if (trainData == null) {
+            logger.error("Training data not set. Cannot retrieve neighbors.");
+            throw new IllegalStateException("Training data not set. Call train() before predict().");
+        }
+        ArrayList<Double> distances = new ArrayList<Double>();
+        ArrayList<CharacteristicVector> vectors = new ArrayList<CharacteristicVector>();
+
+        // Sort each Characteristic Vector by their distance to the InputVector
+        for (CharacteristicVector cVector : trainData) {
+            int i = 0;
+            double distance = calculateDistance(cVector, input);
+            while (i < distances.size() && distances.get(i) <= distance) {
+                i++;
+            }
+            distances.add(i, distance);
+            vectors.add(i, cVector);
+        }
+        return vectors;
+    }
+
+    /**
+     * Retrieves up to k neighbors of the given input vector in ascending order of
+     * distance.
+     * If two distances are equal, the vector that was encountered first in the
+     * training data will appear before the later one.
+     * If k is greater than the number of available training data points, all points
+     * are returned.
+     * 
+     * @param input the CharacteristicVector for which to find the neighbors. This
+     *              vector is compared to all vectors in the training data.
+     * @param k     the maximum number of neighbors to return.
+     * @return an ArrayList of CharacteristicVector objects sorted
+     *         in ascending order by their distance to the input vector, limited to
+     *         k neighbors.
+     * @throws IllegalStateException    if the training data has not been
+     *                                  initialized prior to calling this method.
+     * @throws IllegalArgumentException if k is less than 1.
+     */
+    public ArrayList<CharacteristicVector> getNeighbors(CharacteristicVector input, int k) {
+        logger.debug("Retrieving up to {} neighbors of : {}", k, input);
+
+        if (trainData == null) {
+            logger.error("Training data not set. Cannot retrieve neighbors.");
+            throw new IllegalStateException("Training data not set. Call train() before predict().");
+        }
+
+        if (k < 1) {
+            logger.error("Got k={} but getNeighbors should never get an int lower than 1.");
+            throw new IllegalArgumentException("The number of neighbors 'k' must be at least 1.");
+        }
+
+        ArrayList<Double> distances = new ArrayList<Double>();
+        ArrayList<CharacteristicVector> vectors = new ArrayList<CharacteristicVector>();
+
+        // Sort each Characteristic Vector by their distance to the InputVector
+        for (CharacteristicVector cVector : trainData) {
+            int i = 0;
+            double distance = calculateDistance(cVector, input);
+            while (i < distances.size() && distances.get(i) <= distance) {
+                i++;
+            }
+            distances.add(i, distance);
+            vectors.add(i, cVector);
+        }
+
+        return new ArrayList<>(vectors.subList(0, Math.min(k, vectors.size())));
     }
 
     /**
