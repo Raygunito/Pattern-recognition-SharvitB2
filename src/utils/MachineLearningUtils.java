@@ -94,4 +94,44 @@ public class MachineLearningUtils {
             cfx.increment(validationLabel, predictedLabel);
         }
     }
+
+    public static ArrayList<CharacteristicVector> normalizeCharacteristicVectors(ArrayList<CharacteristicVector> vectorArray){
+        return normalizeCharacteristicVectors(vectorArray,0,1);
+    }
+    public static ArrayList<CharacteristicVector> normalizeCharacteristicVectors(ArrayList<CharacteristicVector> vectorArray, int min, int max){
+        if (vectorArray == null || vectorArray.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        double globalMin = Double.MAX_VALUE;
+        double globalMax = Double.MIN_VALUE;
+
+        for (CharacteristicVector cv : vectorArray) {
+            for (double value : cv.getVector()) {
+                if (value < globalMin) globalMin = value;
+                if (value > globalMax) globalMax = value;
+            }
+        }
+
+        // Step 2: Normalize all vectors using the global min and max
+        ArrayList<CharacteristicVector> normalizedVectors = new ArrayList<>();
+
+        for (CharacteristicVector cv : vectorArray) {
+            double[] originalVector = cv.getVector();
+            double[] normalizedVector = new double[originalVector.length];
+
+            for (int i = 0; i < originalVector.length; i++) {
+                if (globalMax - globalMin == 0) {
+                    // division by zero
+                    normalizedVector[i] = (min + max) / 2.0;
+                } else {
+                    normalizedVector[i] = min + (originalVector[i] - globalMin) * (max - min) / (globalMax - globalMin);
+                }
+            }
+            normalizedVectors.add(new CharacteristicVector(normalizedVector, cv.getLabel(), cv.getMethod(), cv.getSample()));
+        }
+
+        return normalizedVectors;
+    }
+
 }

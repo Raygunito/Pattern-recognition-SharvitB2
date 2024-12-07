@@ -14,7 +14,7 @@ import logger.LoggerUtil;
 import utils.MathUtils;
 
 public class KMeansClassifier implements Classifier {
-    private static final Logger logger = LoggerUtil.getLogger(KMeansClassifier.class, Level.INFO);
+    private static final Logger logger = LoggerUtil.getLogger(KMeansClassifier.class, Level.WARN);
     private String distanceMetric;
     private int k;
     private int norm;
@@ -28,9 +28,13 @@ public class KMeansClassifier implements Classifier {
         this.distanceMetric = metric;
     }
 
-    public KMeansClassifier(int kCluster, int norm) {
+    public KMeansClassifier(int kCluster, String metric, int norm) {
+        if (norm < 1) {
+            logger.error("Norm is lower than 1, forcing norm to be equal to 1");
+            norm = 1;
+        }
         this.k = kCluster;
-        this.distanceMetric = Classifier.MINKOWSKI;
+        this.distanceMetric = metric;
         this.norm = norm;
     }
 
@@ -59,14 +63,17 @@ public class KMeansClassifier implements Classifier {
                 cluster.get(indexToAdd).add(cVector);
             }
 
+            double currentSSE = calculateSSE();
+            logger.info("Iteration {}: SSE = {}", iteration, currentSSE);
+
             ArrayList<CharacteristicVector> newCentroid = calculateNewCentroids();
 
             // stop if clusters are stabilized between the previous step and the current
             // step
-            if (centroidsAreCloseEnough(newCentroid, arrayCentroid, 0.0001)) {
+            if (centroidsAreCloseEnough(newCentroid, arrayCentroid, 0.0000001)) {
                 logger.info("Convergence reached after {} iterations", iteration);
                 same = true;
-            }else{
+            } else {
                 logger.debug("Iteration {}: Centroids updated", iteration);
             }
             this.arrayCentroid = newCentroid;
@@ -77,10 +84,22 @@ public class KMeansClassifier implements Classifier {
     // TODO
     @Override
     public String predict(CharacteristicVector vector) throws IllegalStateException {
-        if (trainData == null) {
+        if (trainData == null || arrayCentroid == null) {
+            logger.error("Attempted to predict without training the model");
             throw new IllegalStateException("Training data not set. Call train() before predict().");
         }
-        return "";
+
+        double[] distances = arrayDistanceFromCentroid(vector, arrayCentroid);
+        int nearestCentroidIndex = minIndex(distances);
+
+        String predictedClusterLabel = "Cluster " + nearestCentroidIndex;
+        logger.trace("Predicted cluster for input vector: {}", predictedClusterLabel);
+
+        return predictedClusterLabel;
+    }
+
+    public ArrayList<ArrayList<CharacteristicVector>> getCluster() {
+        return cluster;
     }
 
     /**
@@ -215,6 +234,7 @@ public class KMeansClassifier implements Classifier {
                 case Classifier.MANHATTAN:
                     return MathUtils.distManhattan(v1, v2);
                 case Classifier.MINKOWSKI:
+                    System.out.println(norm);
                     return MathUtils.distMinkowski(v1, v2, norm);
                 default:
                     logger.warn("Unknown distance metric: {}. Defaulting to maximum distance.", distanceMetric);
@@ -279,7 +299,8 @@ public class KMeansClassifier implements Classifier {
 
             for (int j = 0; j < newVector.length; j++) {
                 if (Math.abs(newVector[j] - oldVector[j]) > threshold) {
-                    logger.debug("Centroids not close enough at index {}: diff = {}", i, Math.abs(newVector[j] - oldVector[j]));
+                    logger.debug("Centroids not close enough at index {}: diff = {}", i,
+                            Math.abs(newVector[j] - oldVector[j]));
                     return false; // Centroids are not close enough
                 }
             }
@@ -288,4 +309,112 @@ public class KMeansClassifier implements Classifier {
         return true;
     }
 
+    /**
+     * Calculates the Sum of Squared Errors (SSE) for the current clustering.
+     *
+     * @return the SSE value
+     */
+    public double calculateSSE() {
+        double sse = 0.0;
+
+        // Loop through each cluster and calculate the squared distances
+        for (int i = 0; i < cluster.size(); i++) {
+            ArrayList<CharacteristicVector> currentCluster = cluster.get(i);
+            CharacteristicVector centroid = arrayCentroid.get(i);
+
+            for (CharacteristicVector cVector : currentCluster) {
+                double distance = 0;
+                try {
+                    // Here we sqrt at after sum
+                    distance = MathUtils.distEuclidean(cVector, centroid);
+                } catch (MathUtilsException e) {
+                    logger.error(e.getMessage());
+                }
+                sse += Math.pow(distance, 2); // since euclidean distance we sqrt at the end, we x^2 it to respect the
+                                              // SSE formula
+            }
+        }
+
+        return sse;
+    }
+
+    /**
+     * Calculates the silhouette score for the entire clustering solution.
+     * 
+     * @return the average silhouette score for the entire clustering solution
+     */
+    public double calculateSilhouetteScore() {
+        ArrayList<ArrayList<CharacteristicVector>> clusters = this.getCluster();
+        double totalSilhouetteScore = 0.0;
+        int totalPoints = 0;
+
+        // Loop over all data points and calculate the silhouette score for each point
+        for (ArrayList<CharacteristicVector> cluster : clusters) {
+            for (CharacteristicVector point : cluster) {
+                double a = calculateA(point, cluster); // Calculate a(i)
+                double b = calculateB(point, clusters); // Calculate b(i)
+                totalSilhouetteScore += (b - a) / Math.max(a, b);
+                totalPoints++;
+            }
+        }
+
+        // Return the average silhouette score
+        return totalSilhouetteScore / totalPoints;
+    }
+
+    /**
+     * Calculates the average distance from a data point to all other points in the
+     * same cluster (a(i)).
+     * 
+     * @param point   the data point
+     * @param cluster the cluster the point belongs to
+     * @return the average distance to all other points in the same cluster
+     */
+    private double calculateA(CharacteristicVector point, ArrayList<CharacteristicVector> cluster) {
+        if (cluster.size() == 1) {
+            return 0.0;
+        }
+        double sum = 0.0;
+        for (CharacteristicVector otherPoint : cluster) {
+            if (otherPoint != point) {
+                try {
+                    sum += MathUtils.distEuclidean(point, otherPoint);
+                } catch (MathUtilsException e) {
+                    // e.printStackTrace();
+                }
+            }
+        }
+        return sum / (cluster.size() - 1);
+    }
+
+    /**
+     * Calculates the average distance from a data point to all points in the
+     * nearest cluster (b(i)).
+     * 
+     * @param point    the data point
+     * @param clusters all the clusters
+     * @return the average distance to the nearest cluster
+     */
+    private double calculateB(CharacteristicVector point, ArrayList<ArrayList<CharacteristicVector>> clusters) {
+        double minAvgDistance = Double.MAX_VALUE;
+
+        // Find the nearest cluster based on the centroid distance
+        for (ArrayList<CharacteristicVector> otherCluster : clusters) {
+            if (otherCluster.contains(point))
+                continue; // Skip the current cluster
+
+            double sum = 0.0;
+            for (CharacteristicVector otherPoint : otherCluster) {
+                try {
+                    sum += MathUtils.distEuclidean(point, otherPoint);
+                } catch (MathUtilsException e) {
+                    // e.printStackTrace();
+                }
+            }
+            double avgDistance = sum / otherCluster.size();
+            minAvgDistance = Math.min(minAvgDistance, avgDistance);
+        }
+
+        return minAvgDistance;
+    }
 }
