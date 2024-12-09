@@ -191,12 +191,13 @@ public class KMeansClassifier implements Classifier {
         // Cluster i-th 1->k contains a array of CharactVect we then compute the mean of
         // this array and create a single CVect then add to ncentroid
         for (ArrayList<CharacteristicVector> currentCluster : this.cluster) {
+            clusterNumber++;
             // Check if get(0) is not empty !!!
             if (currentCluster.isEmpty()) {
                 int randomIndex = new Random().nextInt(trainData.size());
                 nCentroids
                         .add(new CharacteristicVector(trainData.get(randomIndex).getVector(),
-                                "Cluster " + (clusterNumber++),
+                                "Cluster " + clusterNumber,
                                 "null", "null"));
                 logger.warn("Cluster {} was empty; assigned a random data point as centroid", clusterNumber - 1);
                 continue;
