@@ -14,7 +14,7 @@ import logger.LoggerUtil;
 import utils.MathUtils;
 
 public class KMeansClassifier implements Classifier {
-    private static final Logger logger = LoggerUtil.getLogger(KMeansClassifier.class, Level.WARN);
+    private static final Logger logger = LoggerUtil.getLogger(KMeansClassifier.class, Level.ERROR);
     private String distanceMetric;
     private int k;
     private int norm;

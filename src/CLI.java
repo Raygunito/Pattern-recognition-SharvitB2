@@ -28,10 +28,10 @@ public class CLI {
             System.out.println("Doing KMeans to folder " + stringPath);
             System.out.println("Manhattan");
             doKMeans(stringPath, nbClass * nbEchantillon, Classifier.MANHATTAN, cut,
-            nbFold);
+                    nbFold);
             System.out.println("Euclidean");
             doKMeans(stringPath, nbClass * nbEchantillon, Classifier.EUCLIDEAN, cut,
-            nbFold);
+                    nbFold);
 
             System.out.println("Doing KNN to folder " + stringPath);
             System.out.println("Manhattan");
@@ -94,13 +94,13 @@ public class CLI {
         for (int i = 0; i < sseArray.size(); i++) {
             String tmp = String.format("%.4f", sseArray.get(i));
             tmp = tmp.replace(',', '.');
-            System.out.print(tmp+", ");
+            System.out.print(tmp + ", ");
         }
         System.out.print("\nSilhouette= ");
         for (int i = 0; i < silArray.size(); i++) {
             String tmp = String.format("%.4f", silArray.get(i));
             tmp = tmp.replace(',', '.');
-            System.out.print(tmp+", ");
+            System.out.print(tmp + ", ");
         }
     }
 
@@ -168,8 +168,8 @@ public class CLI {
                 DataLoader.extractFromFolder(path).subList(0, 120));
         ArrayList<ArrayList<CharacteristicVector>> fold = MachineLearningUtils.createKFolds(dataset, 12);
         ArrayList<CharacteristicVector> testFold = fold.get(0);
-        ArrayList<CharacteristicVector> trainFold = new ArrayList<>() ;
-        
+        ArrayList<CharacteristicVector> trainFold = new ArrayList<>();
+
         double[] precision = new double[12];
         double[] recall = new double[12];
 
@@ -188,14 +188,14 @@ public class CLI {
 
             int relevant = 0;
             int totalInClass = count(trainFold, trueLabel);
-            
+
             for (int i = 0; i < neigh.size(); i++) {
                 if (neigh.get(i).getLabel().equals(res)) {
                     relevant++;
                 }
 
-                precision[i] += (double)relevant/(double)(i+1);
-                recall[i] += (double)relevant/totalInClass;
+                precision[i] += (double) relevant / (double) (i + 1);
+                recall[i] += (double) relevant / totalInClass;
             }
 
         }
@@ -210,13 +210,97 @@ public class CLI {
         System.out.println("Recall : ");
         for (int i = 0; i < recall.length; i++) {
             tmp = String.valueOf(recall[i]).replace(',', '.');
-            System.out.printf(tmp+",");
+            System.out.printf(tmp + ",");
         }
         System.out.println();
         System.out.println("Precision : ");
         for (int i = 0; i < precision.length; i++) {
             tmp = String.valueOf(precision[i]).replace(',', '.');
-            System.out.printf(tmp+",");
+            System.out.printf(tmp + ",");
+        }
+    }
+
+    public static void doSSESIL(String folderLocation, int datasetSize, String distanceMetric, boolean b, int nbFold) {
+        ArrayList<CharacteristicVector> dataset = new ArrayList<>(
+                DataLoader.extractFromFolder(folderLocation).subList(0, datasetSize));
+        dataset = MachineLearningUtils.normalizeCharacteristicVectors(dataset);
+
+        ArrayList<Double> sseArray = new ArrayList<>();
+        ArrayList<Double> silArray = new ArrayList<>();
+
+        int numRepetitions = 50;
+        for (int repetition = 0; repetition < numRepetitions; repetition++) {
+            ArrayList<ArrayList<CharacteristicVector>> folds = MachineLearningUtils.createKFolds(dataset, nbFold);
+
+            // number of clusters to find the best K
+            for (int k = 2; k < 19; k++) {
+                KMeansClassifier kMeansClassifier = new KMeansClassifier(k, distanceMetric);
+                if (distanceMetric == Classifier.MINKOWSKI) {
+                    kMeansClassifier = new KMeansClassifier(k, distanceMetric, 3);
+                }
+
+                double currentBestSSE = Double.MAX_VALUE;
+                double currentBestSilScore = Double.MIN_VALUE;
+
+                for (int i = 0; i < folds.size(); i++) {
+
+                    ArrayList<CharacteristicVector> testSet = folds.get(i);
+                    ArrayList<CharacteristicVector> trainSet = new ArrayList<>();
+                    for (int j = 0; j < folds.size(); j++) {
+                        if (j != i) {
+                            trainSet.addAll(folds.get(j));
+                        }
+                    }
+
+                    kMeansClassifier.train(trainSet);
+                    double foldSSE = kMeansClassifier.calculateSSE();
+                    double foldSilScore = kMeansClassifier.calculateSilhouetteScore();
+
+                    if (foldSSE <= currentBestSSE) {
+                        currentBestSSE = foldSSE;
+                    }
+
+                    if (foldSilScore >= currentBestSilScore) {
+                        currentBestSilScore = foldSilScore;
+                    }
+                    // quest ce que j'en fais du test fold ?
+                }
+                sseArray.add(Double.valueOf(currentBestSSE));
+                silArray.add(Double.valueOf(currentBestSilScore));
+            }
+        }
+
+        // Calculate average SSE and Silhouette score for each k over all repetitions
+        ArrayList<Double> avgSSEArray = new ArrayList<>();
+        ArrayList<Double> avgSilArray = new ArrayList<>();
+
+        for (int k = 2; k < 19; k++) {
+            double totalSSE = 0;
+            double totalSilScore = 0;
+            int count = 0;
+
+            for (int repetition = 0; repetition < numRepetitions; repetition++) {
+                totalSSE += sseArray.get(repetition * 17 + (k - 2)); // Adjust the index for SSE per k
+                totalSilScore += silArray.get(repetition * 17 + (k - 2)); // Adjust the index for Silhouette per k
+                count++;
+            }
+
+            avgSSEArray.add(totalSSE / count);
+            avgSilArray.add(totalSilScore / count);
+        }
+
+        System.out.print("Avg SSE= ");
+        for (int i = 0; i < avgSSEArray.size(); i++) {
+            String tmp = String.format("%.4f", avgSSEArray.get(i));
+            tmp = tmp.replace(',', '.');
+            System.out.print(tmp + ", ");
+        }
+
+        System.out.print("\nAvg Silhouette= ");
+        for (int i = 0; i < avgSilArray.size(); i++) {
+            String tmp = String.format("%.4f", avgSilArray.get(i));
+            tmp = tmp.replace(',', '.');
+            System.out.print(tmp + ", ");
         }
     }
 
