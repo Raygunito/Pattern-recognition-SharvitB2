@@ -67,6 +67,14 @@ public class MachineLearningUtils {
         return (double) correctPredictions / dataset.size();
     }
 
+    /**
+     * Perform LOOCV AND fill the confusion matrix
+     * 
+     * @param dataset    ArrayList of CharacteristicVector
+     * @param classifier The class that implement classifier interface
+     * @param cfx        a fresh confusion matrix (or already filled but we don't
+     *                   see the use)
+     */
     public static void performLOOCV(ArrayList<CharacteristicVector> dataset, Classifier classifier,
             ConfusionMatrix cfx) {
         if (dataset == null || dataset.isEmpty()) {
@@ -95,10 +103,31 @@ public class MachineLearningUtils {
         }
     }
 
-    public static ArrayList<CharacteristicVector> normalizeCharacteristicVectors(ArrayList<CharacteristicVector> vectorArray){
-        return normalizeCharacteristicVectors(vectorArray,0,1);
+    /**
+     * Normalizes a list of CharacteristicVector objects to have values between 0
+     * and 1.
+     * 
+     * @param vectorArray ArrayList<CharacteristicVector> the input arraylist
+     * @return ArrayList<CharacteristicVector> where each value a between 0 and 1
+     */
+    public static ArrayList<CharacteristicVector> normalizeCharacteristicVectors(
+            ArrayList<CharacteristicVector> vectorArray) {
+        return normalizeCharacteristicVectors(vectorArray, 0, 1);
     }
-    public static ArrayList<CharacteristicVector> normalizeCharacteristicVectors(ArrayList<CharacteristicVector> vectorArray, int min, int max){
+
+    /**
+     * Normalizes a list of {@code CharacteristicVector} objects to have values
+     * between specified bounds.
+     *
+     * @param vectorArray the input list of {@code CharacteristicVector} objects.
+     * @param min         the minimum bound for the normalized values.
+     * @param max         the maximum bound for the normalized values.
+     * @return a new list of {@code CharacteristicVector} objects with normalized
+     *         values,
+     *         or an empty list if the input is null or empty.
+     */
+    public static ArrayList<CharacteristicVector> normalizeCharacteristicVectors(
+            ArrayList<CharacteristicVector> vectorArray, int min, int max) {
         if (vectorArray == null || vectorArray.isEmpty()) {
             return new ArrayList<>();
         }
@@ -108,8 +137,10 @@ public class MachineLearningUtils {
 
         for (CharacteristicVector cv : vectorArray) {
             for (double value : cv.getVector()) {
-                if (value < globalMin) globalMin = value;
-                if (value > globalMax) globalMax = value;
+                if (value < globalMin)
+                    globalMin = value;
+                if (value > globalMax)
+                    globalMax = value;
             }
         }
 
@@ -128,7 +159,8 @@ public class MachineLearningUtils {
                     normalizedVector[i] = min + (originalVector[i] - globalMin) * (max - min) / (globalMax - globalMin);
                 }
             }
-            normalizedVectors.add(new CharacteristicVector(normalizedVector, cv.getLabel(), cv.getMethod(), cv.getSample()));
+            normalizedVectors
+                    .add(new CharacteristicVector(normalizedVector, cv.getLabel(), cv.getMethod(), cv.getSample()));
         }
 
         return normalizedVectors;

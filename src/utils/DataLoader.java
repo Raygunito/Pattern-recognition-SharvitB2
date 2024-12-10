@@ -16,10 +16,30 @@ import org.apache.logging.log4j.Logger;
 import data.CharacteristicVector;
 import logger.LoggerUtil;
 
+/**
+ * Utility class for loading and extracting {@code CharacteristicVector} data
+ * from files and directories.
+ * Provides functionality to read numerical data from text files, interpret
+ * metadata from filenames,
+ * and organize the extracted data into CharacteristicVector objects.
+ */
 public class DataLoader {
+    /**
+     * Array of predefined method identifiers used to determine the method from
+     * filenames.
+     */
     private static final String[] METHOD = { "ART", "ZRK", "E34", "GFD", "YNG" };
     private static final Logger logger = LoggerUtil.getLogger(DataLoader.class, Level.INFO);
 
+    /**
+     * Extracts a CharacteristicVector from a single file by reading numerical
+     * values
+     * and parsing metadata from the filename.
+     *
+     * @param pathname the path of the file to extract data from.
+     * @return a CharacteristicVector object containing the extracted data and
+     *         metadata.
+     */
     public static CharacteristicVector extractFromFile(String pathname) {
         List<Double> list = new ArrayList<Double>();
         BufferedReader buffer = null;
@@ -56,11 +76,19 @@ public class DataLoader {
         String label = getLabelNumber(filename);
         String sample = getSampleNumber(filename);
 
-        logger.debug("Extracted CharacteristicVector from file: {}, Method: {}, Label: {}, Sample: {}", pathname, method,
+        logger.debug("Extracted CharacteristicVector from file: {}, Method: {}, Label: {}, Sample: {}", pathname,
+                method,
                 label, sample);
         return new CharacteristicVector(arrayDoubles, label, method, sample);
     }
 
+    /**
+     * Extracts a list of CharacteristicVector objects from all valid files within a
+     * folder.
+     *
+     * @param folderPath the path of the folder containing files to process.
+     * @return an ArrayList of CharacteristicVector objects.
+     */
     public static ArrayList<CharacteristicVector> extractFromFolder(String folderPath) {
         ArrayList<CharacteristicVector> vectors = new ArrayList<>();
         DirectoryStream<Path> stream = null;

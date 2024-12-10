@@ -13,6 +13,11 @@ import data.MathUtilsException;
 import logger.LoggerUtil;
 import utils.MathUtils;
 
+/**
+ * KMeansClassifier implements the k-means clustering algorithm for
+ * partitioning data into k clusters. Use KMeans++ and support all
+ * from {@code Classifier} interface
+ */
 public class KMeansClassifier implements Classifier {
     private static final Logger logger = LoggerUtil.getLogger(KMeansClassifier.class, Level.ERROR);
     private String distanceMetric;
@@ -23,11 +28,26 @@ public class KMeansClassifier implements Classifier {
     private ArrayList<CharacteristicVector> arrayCentroid;
     private ArrayList<CharacteristicVector> trainData;
 
+    /**
+     * Constructs a KMeansClassifier with the specified number of clusters and
+     * distance metric.
+     *
+     * @param kCluster the number of clusters
+     * @param metric   the distance metric to use (e.g., "EUCLIDEAN", "MANHATTAN")
+     */
     public KMeansClassifier(int kCluster, String metric) {
         this.k = kCluster;
         this.distanceMetric = metric;
     }
 
+    /**
+     * Constructs a KMeansClassifier with the specified number of clusters and
+     * Minkowski norm.
+     *
+     * @param kCluster the number of clusters
+     * @param metric   the distance metric to use (Must be Classifier.MINKOWSKI)
+     * @param norm     the norm for Minkowski distance (must be >= 1)
+     */
     public KMeansClassifier(int kCluster, String metric, int norm) {
         if (norm < 1) {
             logger.error("Norm is lower than 1, forcing norm to be equal to 1");
@@ -81,7 +101,14 @@ public class KMeansClassifier implements Classifier {
         }
     }
 
-    // TODO
+    // TODO finish the proper implementation
+    /**
+     * Predicts the cluster label for the given input vector.
+     *
+     * @param vector the input vector to classify
+     * @return the predicted cluster label
+     * @throws IllegalStateException if the model has not been trained
+     */
     @Override
     public String predict(CharacteristicVector vector) throws IllegalStateException {
         if (trainData == null || arrayCentroid == null) {
